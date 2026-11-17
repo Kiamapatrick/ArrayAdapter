@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Earthy/green palette for dark mode -->
+    <color name="primary_deep_green">#81C784</color>
+    <color name="primary_light_green">#A5D6A7</color>
+    <color name="accent_warm_brown">#BCAAA4</color>
+    <color name="background_cream">#2C2C2C</color>
+    <color name="surface_white">#1E1E1E</color>
+
+    <!-- Text colors for dark mode -->
+    <color name="label_text">#C8E6C9</color>
+    <color name="prompt_text">#9E9E9E</color>
+    <color name="error_red">#EF5350</color>
+
+    <!-- Standard colors -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>

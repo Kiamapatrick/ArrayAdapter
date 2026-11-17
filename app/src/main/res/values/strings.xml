@@ -1,0 +1,33 @@
+<resources>
+    <string name="app_name">ArrayAdapter</string>
+
+    <!-- Titles and labels -->
+    <string name="title">Mushroom Collection Point</string>
+    <string name="subtitle">Select a location to record your mushroom findings</string>
+    <string name="spinner_label">Collection Point</string>
+    <string name="spinner_prompt">Select a collection point…</string>
+    <string name="checkbox_reminder">Remind me to bring a field guide</string>
+    <string name="btn_submit">Submit</string>
+
+    <!-- Confirmation card -->
+    <string name="confirmation_title">Confirmation</string>
+    <string name="confirmation_label">Selected: %s</string>
+    <string name="confirmation_id">ID: %d</string>
+    <string name="confirmation_reminder_on">Reminder: On</string>
+    <string name="confirmation_reminder_off">Reminder: Off</string>
+
+    <!-- Errors and messages -->
+    <string name="error_select_point">Please choose a collection point</string>
+    <string name="toast_choice_unavailable">Your previous choice is no longer available</string>
+    <string name="empty_state">No collection points available</string>
+
+    <!-- Test controls -->
+    <string name="test_controls_title">Test controls</string>
+    <string name="btn_reverse">Reverse order</string>
+    <string name="btn_remove_selected">Remove selected</string>
+    <string name="btn_empty_list">Empty list</string>
+    <string name="btn_restore_list">Restore list</string>
+
+    <!-- Format strings -->
+    <string name="id_format">ID %d</string>
+</resources>

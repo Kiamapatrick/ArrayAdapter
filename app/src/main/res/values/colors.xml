@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Earthy/green palette -->
+    <color name="primary_deep_green">#2E7D32</color>
+    <color name="primary_light_green">#4CAF50</color>
+    <color name="accent_warm_brown">#8D6E63</color>
+    <color name="background_cream">#F9F5EB</color>
+    <color name="surface_white">#FFFFFFFF</color>
+
+    <!-- Text colors -->
+    <color name="label_text">#1B5E20</color>
+    <color name="prompt_text">#9E9E9E</color>
+    <color name="error_red">#C62828</color>
+
+    <!-- Standard colors -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>
