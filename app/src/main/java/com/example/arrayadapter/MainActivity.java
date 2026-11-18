@@ -4,7 +4,6 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -30,6 +29,8 @@ public class MainActivity extends AppCompatActivity {
     private static final String KEY_SELECTED_ID = "selected_id";
     private static final String KEY_CHECKBOX_STATE = "checkbox_state";
     private static final String KEY_CONFIRMATION_VISIBLE = "confirmation_visible";
+    private static final String KEY_OPTION_IDS = "option_ids";
+    private static final String KEY_IS_LIST_EMPTY = "is_list_empty";
 
     // UI components
     private Spinner spinnerCollectionPoint;
@@ -47,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
 
     // Data
     private List<CollectionPoint> collectionPoints;
-    private List<CollectionPoint> originalCollectionPoints; // For restore
+    private List<CollectionPoint> originalCollectionPoints; // Master list for lookup
     private CollectionPointAdapter adapter;
     private int selectedId = -1; // -1 means prompt selected
     private boolean checkboxState = false;
@@ -66,13 +67,19 @@ public class MainActivity extends AppCompatActivity {
         });
 
         initViews();
-        initData();
+        initMasterData();
+
+        // Disable spinner's own save/restore; we handle it via stable IDs
+        spinnerCollectionPoint.setSaveEnabled(false);
+
         setupSpinner();
         setupListeners();
 
         if (savedInstanceState != null) {
             restoreState(savedInstanceState);
         } else {
+            // Initial setup with full list
+            rebuildCollectionPointsFromMaster();
             updateUiForDataState();
         }
     }
@@ -92,18 +99,47 @@ public class MainActivity extends AppCompatActivity {
         tvEmptyState = findViewById(R.id.tvEmptyState);
     }
 
-    private void initData() {
-        // Create synthetic data with stable IDs
-        collectionPoints = new ArrayList<>();
-        collectionPoints.add(new CollectionPoint(-1, getString(R.string.spinner_prompt))); // Prompt row
-        collectionPoints.add(new CollectionPoint(101, "Karura Forest"));
-        collectionPoints.add(new CollectionPoint(102, "Ngong Hills"));
-        collectionPoints.add(new CollectionPoint(103, "Aberdare Edge"));
-        collectionPoints.add(new CollectionPoint(104, "Kakamega Forest"));
-        collectionPoints.add(new CollectionPoint(105, "Mt. Kenya Lower Slopes"));
+    private void initMasterData() {
+        // Master list (never modified) for looking up labels by ID
+        originalCollectionPoints = new ArrayList<>();
+        originalCollectionPoints.add(new CollectionPoint(-1, getString(R.string.spinner_prompt)));
+        originalCollectionPoints.add(new CollectionPoint(101, "Karura Forest"));
+        originalCollectionPoints.add(new CollectionPoint(102, "Ngong Hills"));
+        originalCollectionPoints.add(new CollectionPoint(103, "Aberdare Edge"));
+        originalCollectionPoints.add(new CollectionPoint(104, "Kakamega Forest"));
+        originalCollectionPoints.add(new CollectionPoint(105, "Mt. Kenya Lower Slopes"));
 
-        // Keep a copy for restore
-        originalCollectionPoints = new ArrayList<>(collectionPoints);
+        // Start with full list
+        rebuildCollectionPointsFromMaster();
+    }
+
+    /** Rebuilds collectionPoints from originalCollectionPoints (used for initial setup and "Restore list"). */
+    private void rebuildCollectionPointsFromMaster() {
+        collectionPoints = new ArrayList<>(originalCollectionPoints);
+        isListEmpty = false;
+        btnEmptyList.setText(R.string.btn_empty_list);
+    }
+
+    /** Rebuilds collectionPoints from a saved array of option IDs (for rotation restore). */
+    private void rebuildCollectionPointsFromIds(int[] savedIds) {
+        collectionPoints = new ArrayList<>();
+        // Always add prompt first
+        collectionPoints.add(new CollectionPoint(-1, getString(R.string.spinner_prompt)));
+        // Add saved IDs in order, looking up labels from master list
+        for (int id : savedIds) {
+            if (id == -1) continue; // Skip prompt if somehow saved
+            CollectionPoint masterPoint = findInMaster(id);
+            if (masterPoint != null) {
+                collectionPoints.add(new CollectionPoint(masterPoint.getId(), masterPoint.getLabel()));
+            }
+        }
+    }
+
+    private CollectionPoint findInMaster(int id) {
+        for (CollectionPoint p : originalCollectionPoints) {
+            if (p.getId() == id) return p;
+        }
+        return null;
     }
 
     private void setupSpinner() {
@@ -115,18 +151,33 @@ public class MainActivity extends AppCompatActivity {
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 CollectionPoint point = adapter.getItem(position);
                 if (point != null) {
-                    selectedId = point.getId();
+                    int newId = point.getId();
+                    boolean idChanged = (newId != selectedId);
+                    selectedId = newId;
                     Log.d("SelectionTrace", "position=" + position + " id=" + point.getId() + " label=" + point.getLabel());
+
                     // Clear error when user selects a valid item
                     if (selectedId != -1) {
                         tvError.setVisibility(View.GONE);
                     }
+
+                    // If selection changed (including to prompt), hide stale confirmation
+                    if (idChanged) {
+                        confirmationVisible = false;
+                        cardConfirmation.setVisibility(View.GONE);
+                    }
+
+                    // Enable/disable Remove button based on valid selection
+                    updateUiForDataState();
                 }
             }
 
             @Override
             public void onNothingSelected(AdapterView<?> parent) {
                 selectedId = -1;
+                confirmationVisible = false;
+                cardConfirmation.setVisibility(View.GONE);
+                updateUiForDataState();
             }
         });
     }
@@ -192,19 +243,20 @@ public class MainActivity extends AppCompatActivity {
         // Remove the selected item from the list
         collectionPoints.removeIf(point -> point.getId() == selectedId);
 
-        // If we removed the last real option, only prompt remains
-        rebuildAdapter();
+        // Hide confirmation card since the selected option is gone
+        confirmationVisible = false;
+        cardConfirmation.setVisibility(View.GONE);
 
-        // After removal, selectedId may no longer exist in list
-        // The spinner will show prompt (position 0) and onItemSelected will fire with id=-1
+        // Show message that choice is no longer available
+        Toast.makeText(this, R.string.toast_choice_unavailable, Toast.LENGTH_SHORT).show();
+
+        rebuildAdapter();
     }
 
     private void handleToggleEmptyList() {
         if (isListEmpty) {
-            // Restore list
-            collectionPoints = new ArrayList<>(originalCollectionPoints);
-            isListEmpty = false;
-            btnEmptyList.setText(R.string.btn_empty_list);
+            // Restore list from master
+            rebuildCollectionPointsFromMaster();
         } else {
             // Empty list - keep only prompt
             collectionPoints = new ArrayList<>();
@@ -273,16 +325,49 @@ public class MainActivity extends AppCompatActivity {
         outState.putInt(KEY_SELECTED_ID, selectedId);
         outState.putBoolean(KEY_CHECKBOX_STATE, checkboxState);
         outState.putBoolean(KEY_CONFIRMATION_VISIBLE, confirmationVisible);
+        outState.putBoolean(KEY_IS_LIST_EMPTY, isListEmpty);
+
+        // Save current option IDs in order (excluding prompt)
+        int[] optionIds = new int[collectionPoints.size() - 1]; // minus prompt
+        for (int i = 1; i < collectionPoints.size(); i++) {
+            optionIds[i - 1] = collectionPoints.get(i).getId();
+        }
+        outState.putIntArray(KEY_OPTION_IDS, optionIds);
     }
 
     private void restoreState(@NonNull Bundle savedInstanceState) {
         selectedId = savedInstanceState.getInt(KEY_SELECTED_ID, -1);
         checkboxState = savedInstanceState.getBoolean(KEY_CHECKBOX_STATE, false);
         confirmationVisible = savedInstanceState.getBoolean(KEY_CONFIRMATION_VISIBLE, false);
+        isListEmpty = savedInstanceState.getBoolean(KEY_IS_LIST_EMPTY, false);
+
+        // Restore list from saved option IDs
+        int[] savedOptionIds = savedInstanceState.getIntArray(KEY_OPTION_IDS);
+        if (savedOptionIds != null && savedOptionIds.length > 0) {
+            rebuildCollectionPointsFromIds(savedOptionIds);
+        } else if (isListEmpty) {
+            // Empty list state: only prompt
+            collectionPoints = new ArrayList<>();
+            collectionPoints.add(new CollectionPoint(-1, getString(R.string.spinner_prompt)));
+        } else {
+            // Fallback: full list
+            rebuildCollectionPointsFromMaster();
+        }
+
+        // Update button text for empty/restore state
+        if (isListEmpty) {
+            btnEmptyList.setText(R.string.btn_restore_list);
+        } else {
+            btnEmptyList.setText(R.string.btn_empty_list);
+        }
 
         cbReminder.setChecked(checkboxState);
 
-        // Rebuild list first (in case data changed), then find position by ID
+        // Rebuild adapter with restored list
+        adapter = new CollectionPointAdapter(this, collectionPoints);
+        spinnerCollectionPoint.setAdapter(adapter);
+
+        // Find position by matching stable ID
         int positionToSelect = findPositionById(selectedId);
 
         // Check if saved ID still exists in current list
@@ -295,6 +380,8 @@ public class MainActivity extends AppCompatActivity {
         }
 
         spinnerCollectionPoint.setSelection(positionToSelect);
+
+        Log.d("SelectionTrace", "restore savedId=" + selectedId + " position=" + positionToSelect);
 
         if (confirmationVisible && selectedId != -1) {
             updateConfirmationCard();

@@ -11,9 +11,7 @@
 *.ap_
 
 # Gradle
-/gradlew
-/gradlew.bat
-/gradle/wrapper/gradle-wrapper.jar
+# (gradlew, gradlew.bat, gradle/wrapper/gradle-wrapper.jar are COMMITTED)
 
 # OS
 .DS_Store
